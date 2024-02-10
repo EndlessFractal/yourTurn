@@ -160,10 +160,6 @@
     animation-fill-mode: forwards
 }
 
-.yourTurnImg.silhoutte {
-    filter: contrast(0) saturate(2000%) brightness(0%) blur(1px)
-}
-
 .yourTurnSubheading,.yourTurnText {
     color: #d3d3d3;
     font-family: "Franklin Gothic Medium","Arial Narrow",Arial,sans-serif;

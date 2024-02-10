@@ -24,6 +24,14 @@ const settings = {
         type: Boolean,
         default: true
     },
+    hideNextUp: {
+        name: 'Hide "Next Up"',
+        hint: 'Toggle to hide the "Next Up" information.',
+        scope: 'world',
+        config: true,
+        type: Boolean,
+        default: false
+    },
 };
 export class Settings {
     static getStartCounterAtOne() {
@@ -34,6 +42,9 @@ export class Settings {
     }
     static getHideNextUpHidden() {
         return game.settings.get(modName, 'hideNextUpHidden');
+    }
+    static getHideNextUp() {
+        return game.settings.get(modName, 'hideNextUp');
     }
     static registerSettings() {
         for (const [name, setting] of Object.entries(settings)) {

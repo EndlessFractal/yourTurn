@@ -96,7 +96,7 @@ export default class TurnSubscriber {
             } else if (combat.combatant.hidden) {
                 if (!game.user.isGM && (!Settings.getHideNextUpHidden() || Settings.getHideNextUpHidden())) {
                     ytText = game.i18n.localize("YOUR-TURN.SomethingHappens");
-                    ytImgClass.push("silhoutte");
+                    this.showHidden();
                 } else {
                     this.hideBanner();
                     return;
@@ -152,7 +152,6 @@ export default class TurnSubscriber {
             currentImgHTML.className = "yourTurnImg";
             currentImgHTML.src = this.image;
             container.append(currentImgHTML);
-            console.log(imgHTML);
         }
         // Create the banner HTML element
         const bannerDiv = document.createElement("div");
@@ -160,11 +159,7 @@ export default class TurnSubscriber {
         bannerDiv.id = "yourTurnBanner";
         bannerDiv.className = "yourTurnBanner";
         bannerDiv.style.height = "150px";
-        bannerDiv.innerHTML = `<p id="yourTurnText" class="yourTurnText">${ytText}</p><div class="yourTurnSubheading">${game.i18n.localize(
-      "YOUR-TURN.Round"
-    )} #${combat.round} ${game.i18n.localize("YOUR-TURN.Turn")} #${turnNumber}</div>${this.getNextTurnHtml(
-      nextCombatant
-    )}<div id="yourTurnBannerBackground" class="yourTurnBannerBackground" height="150"></div>`;
+        bannerDiv.innerHTML = `<p id="yourTurnText" class="yourTurnText">${ytText}</p><div class="yourTurnSubheading">${game.i18n.localize("YOUR-TURN.Round")} #${combat.round} ${game.i18n.localize("YOUR-TURN.Turn")} #${turnNumber}</div>${this.getNextTurnHtml(nextCombatant)}<div id="yourTurnBannerBackground" class="yourTurnBannerBackground" height="150"></div>`;
         // Set the CSS variables for player and GM colors
         const r = document.querySelector(":root");
         if (combat?.combatant?.hasPlayerOwner && combat?.combatant?.players[0].active) {
@@ -189,18 +184,29 @@ export default class TurnSubscriber {
             this.unloadImage();
         }, 5000);
     }
+    static showHidden() {
+        const container = document.getElementById("yourTurnContainer");
+        // Check if the container exists
+        if (!container) {
+            return;
+        }
+        // Check and delete the current image
+        this.checkAndDelete(this.currentImgID);
+        const imgHTML = document.createElement("img");
+        imgHTML.id = this.nextImgID;
+        imgHTML.src = "modules/your-turn/img/hidden.svg";
+        container.append(imgHTML);
+    }
     static hideBanner() {
         const bannerDiv = document.getElementById("yourTurnBanner");
         if (bannerDiv) {
-            bannerDiv.innerHTML = ''; // Clear the HTML content to hide the banner
+            bannerDiv.innerHTML = '';
         }
     }
     // Static method that loads the image for the next turn
     static loadNextImage(combat) {
         const nextTurn = combat.turn + 1;
-        const hiddenImgHTML = `<div id="yourTurnPreload"><img id="yourTurnPreloadImg" src=${
-      combat?.turns[(combat.turn + 1) % combat.turns.length].actor.img
-    } loading="eager" width="800" height="800"></img><div>`;
+        const hiddenImgHTML = `<div id="yourTurnPreload"><img id="yourTurnPreloadImg" src=${combat?.turns[(combat.turn + 1) % combat.turns.length].actor.img} loading="eager" width="800" height="800"></img><div>`;
         const yourTurnPreloadDiv = document.querySelector("div#yourTurnPreload");
         if (yourTurnPreloadDiv) {
             yourTurnPreloadDiv.remove();
@@ -235,23 +241,20 @@ export default class TurnSubscriber {
     }
     // Static method that generates the HTML for the next turn
     static getNextTurnHtml(combatant) {
-        const displayNext = true;
-        let name = combatant.name;
-        let imgClass = "yourTurnImg yourTurnSubheading";
-        if (game.modules.get("combat-utility-belt")?.active) {
-            if (game.cub.hideNames.shouldReplaceName(combatant?.actor)) {
-                name = game.cub.hideNames.getReplacementName(combatant?.actor);
-                imgClass += " silhoutte";
+        const hideNextUp = Settings.getHideNextUp();
+        if (!hideNextUp) {
+            let name = combatant.name;
+            let imgClass = "yourTurnImg yourTurnSubheading";
+            if (game.modules.get("combat-utility-belt")?.active) {
+                if (game.cub.hideNames.shouldReplaceName(combatant?.actor)) {
+                    name = game.cub.hideNames.getReplacementName(combatant?.actor);
+                    this.showHidden();
+                }
             }
-        }
-        if (displayNext) {
-            const rv = `<div class="yourTurnSubheading last">${game.i18n.localize(
-        "YOUR-TURN.NextUp"
-      )}:  <img class="${imgClass}" src="${combatant.actor.img}"></img>${name}</div>`;
-            console.log(rv);
+            const rv = `<div class="yourTurnSubheading last">${game.i18n.localize("YOUR-TURN.NextUp")}:  <img class="${imgClass}" src="${combatant.actor.img}"></img>${name}</div>`;
             return rv;
         } else {
-            return null;
+            return "";
         }
     }
     // Static method that checks and deletes an element by ID
