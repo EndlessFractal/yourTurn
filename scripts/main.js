@@ -70,7 +70,7 @@ export default class TurnSubscriber {
         // Update the lastCombatant property to the current combatant
         this.lastCombatant = combat.combatant;
         // Get the image of the current combatant's actor
-        this.image = combat?.combatant.actor.img;
+        this.image = Settings.getUseTokens() ? combat?.combatant.actor.token.texture.src : combat?.combatant.actor.img;
         // Get the name of the current combatant
         let ytName = combat?.combatant.name;
         // Initialize the ytText and ytImgClass variables
@@ -83,14 +83,27 @@ export default class TurnSubscriber {
                 ytName = game.cub.hideNames.getReplacementName(combat?.combatant?.actor);
             }
         }
+        // Check if the combatant is defeated        
+        if (combat?.combatant?.defeated) {
+            // Hide the banner for defeated enemies
+            this.hideBanner();
+            return;
+        }
         // Determine the text to be displayed based on the current combatant
-        if (combat?.combatant?.isOwner && !game.user.isGM && combat?.combatant?.players[0]?.active) {
-            ytText = `${game.i18n.localize("YOUR-TURN.YourTurn")}, ${ytName}!`;
-        } else if (combat?.combatant?.hidden && !game.user.isGM) {
-            ytText = game.i18n.localize("YOUR-TURN.SomethingHappens");
-            ytImgClass.push("silhoutte");
-        } else {
-            ytText = `${ytName}'s ${game.i18n.localize("YOUR-TURN.Turn")}!`;
+        if (combat?.combatant) {
+            if (combat.combatant.isOwner && !game.user.isGM && combat.combatant.players[0]?.active) {
+                ytText = `${game.i18n.localize("YOUR-TURN.YourTurn")}, ${ytName}!`;
+            } else if (combat.combatant.hidden) {
+                if (!game.user.isGM && (!Settings.getHideNextUpHidden() || Settings.getHideNextUpHidden())) {
+                    ytText = game.i18n.localize("YOUR-TURN.SomethingHappens");
+                    ytImgClass.push("silhoutte");
+                } else {
+                    this.hideBanner();
+                    return;
+                }
+            } else {
+                ytText = `${ytName}'s ${game.i18n.localize("YOUR-TURN.Turn")}!`;
+            }
         }
         // Get the next combatant and the expected next combatant
         const nextCombatant = this.getNextCombatant(combat);
@@ -119,11 +132,18 @@ export default class TurnSubscriber {
         // Increment the image count and generate the ID for the next image
         this.imgCount += 1;
         this.nextImgID = `yourTurnImg${this.imgCount}`;
+        // Check if tokens should be used instead of actor images
+        let imageHTML;
+        if (Settings.getUseTokens()) {
+            imageHTML = combat.combatant.actor.token.texture.src;
+        } else {
+            imageHTML = expectedNext?.actor.img;
+        }
         // Create the HTML element for the next image
         const imgHTML = document.createElement("img");
         imgHTML.id = this.nextImgID;
         imgHTML.className = "yourTurnImg";
-        imgHTML.src = expectedNext?.actor.img;
+        imgHTML.src = imageHTML;
         if (this.currentImgID === null) {
             // If there is no current image, create it
             this.currentImgID = `yourTurnImg${this.imgCount - 1}`;
@@ -168,15 +188,11 @@ export default class TurnSubscriber {
         this.myTimer = setInterval(() => {
             this.unloadImage();
         }, 5000);
-        let imageHTML;
-        // Check if tokens should be used instead of actor images
-        if (Settings.getUseTokens()) {
-            const token = combat?.combatant.token;
-            if (token) {
-                imageHTML = this.getTokenImage(token);
-            }
-        } else {
-            imageHTML = `<img src="${expectedNext?.actor.img}" />`;
+    }
+    static hideBanner() {
+        const bannerDiv = document.getElementById("yourTurnBanner");
+        if (bannerDiv) {
+            bannerDiv.innerHTML = ''; // Clear the HTML content to hide the banner
         }
     }
     // Static method that loads the image for the next turn
@@ -194,12 +210,18 @@ export default class TurnSubscriber {
     // Static method that unloads the current image
     static unloadImage() {
         clearInterval(this.myTimer);
-        const element = document.getElementById("yourTurnBannerBackground");
-        element.classList.add("removing");
-        const bannerElement = document.getElementById("yourTurnBanner");
-        bannerElement.classList.add("removing");
-        const currentImgElement = document.getElementById(this.currentImgID);
-        currentImgElement.classList.add("removing");
+        if (!this.currentImgID) {
+            return;
+        }
+        const addRemovingClass = (elementId) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.classList.add("removing");
+            }
+        };
+        addRemovingClass("yourTurnBannerBackground");
+        addRemovingClass("yourTurnBanner");
+        addRemovingClass(this.currentImgID);
     }
     // Static method that retrieves the next combatant
     static getNextCombatant(combat) {
