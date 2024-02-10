@@ -70,7 +70,7 @@ export default class TurnSubscriber {
         // Update the lastCombatant property to the current combatant
         this.lastCombatant = combat.combatant;
         // Get the image of the current combatant's actor
-        this.image = Settings.getUseTokens() ? combat?.combatant.actor.token.texture.src : combat?.combatant.actor.img;
+        this.image = Settings.getUseTokens() ? (combat?.combatant.actor.token?.texture.src ?? combat?.combatant.actor.img) : combat?.combatant.actor.img;
         // Get the name of the current combatant
         let ytName = combat?.combatant.name;
         // Initialize the ytText and ytImgClass variables
@@ -134,10 +134,10 @@ export default class TurnSubscriber {
         this.nextImgID = `yourTurnImg${this.imgCount}`;
         // Check if tokens should be used instead of actor images
         let imageHTML;
-        if (Settings.getUseTokens()) {
-            imageHTML = combat.combatant.actor.token.texture.src;
+        if (Settings.getUseTokens() && combat?.combatant?.actor?.token) {
+            imageHTML = combat.combatant.actor.token.texture.src || combat.combatant.actor.img;
         } else {
-            imageHTML = expectedNext?.actor.img;
+            imageHTML = expectedNext?.actor?.img;
         }
         // Create the HTML element for the next image
         const imgHTML = document.createElement("img");
@@ -182,7 +182,7 @@ export default class TurnSubscriber {
         clearInterval(this.myTimer);
         this.myTimer = setInterval(() => {
             this.unloadImage();
-        }, 5000);
+        }, 4000);
     }
     static showHidden() {
         const container = document.getElementById("yourTurnContainer");
