@@ -195,6 +195,7 @@ export default class TurnSubscriber {
         const imgHTML = document.createElement("img");
         imgHTML.id = this.nextImgID;
         imgHTML.src = "modules/your-turn/img/hidden.svg";
+        imgHTML.className = "yourTurnImg";
         container.append(imgHTML);
     }
     static hideBanner() {
