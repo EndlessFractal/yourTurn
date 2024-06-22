@@ -94,7 +94,7 @@ export default class TurnSubscriber {
             if (combat.combatant.isOwner && !game.user.isGM && combat.combatant.players[0]?.active) {
                 ytText = `${game.i18n.localize("YOUR-TURN.YourTurn")}, ${ytName}!`;
             } else if (combat.combatant.hidden) {
-                if (!game.user.isGM && (!Settings.getHideNextUpHidden() || Settings.getHideNextUpHidden())) {
+                if (!game.user.isGM && !Settings.getHideNextUpHidden()) {
                     ytText = game.i18n.localize("YOUR-TURN.SomethingHappens");
                     this.showHidden();
                 } else {
@@ -232,11 +232,12 @@ export default class TurnSubscriber {
     }
     // Static method that retrieves the next combatant
     static getNextCombatant(combat) {
+        if (!combat || !combat.turns) return null;
         let j = 1;
-        let combatant = combat?.turns[(combat.turn + j) % combat.turns.length];
-        while (combatant.hidden && j < combat.turns.length && !game.user.isGM) {
+        let combatant = combat.turns[(combat.turn + j) % combat.turns.length];
+        while ((combatant.hidden || combatant.defeated) && j < combat.turns.length) {
             j++;
-            combatant = combat?.turns[(combat.turn + j) % combat.turns.length];
+            combatant = combat.turns[(combat.turn + j) % combat.turns.length];
         }
         return combatant;
     }
