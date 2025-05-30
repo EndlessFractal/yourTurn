@@ -1,13 +1,13 @@
-@keyframes imgSlideDown {
+@keyframes yourTurn-imgSlideDown {
     0% {
-        width: 800px;
-        height: 800px;
+        width: calc(var(--yourTurnImgWidth) + 200px);
+        height: calc(var(--yourTurnImgWidth) + 200px);
         opacity: 0
     }
 
     20% {
-        width: 500px;
-        height: 500px;
+        width: calc(var(--yourTurnImgWidth) + 100px);
+        height: calc(var(--yourTurnImgWidth) + 100px);
         opacity: 0
     }
 
@@ -16,13 +16,13 @@
     }
 
     to {
-        width: 400px;
-        height: 400px;
+        width: var(--yourTurnImgWidth);
+        height: var(--yourTurnImgHeight);
         opacity: 1
     }
 }
 
-@keyframes backgroundColor {
+@keyframes yourTurn-backgroundColor {
     0% {
         background-color: transparent;
         opacity: 1;
@@ -46,7 +46,7 @@
     }
 }
 
-@keyframes borderSlideDown {
+@keyframes yourTurn-borderSlideDown {
     0% {
         border-bottom-width: 0
     }
@@ -56,7 +56,7 @@
     }
 }
 
-@keyframes backgroundDisappear {
+@keyframes yourTurn-backgroundDisappear {
     0% {
         width: 100%
     }
@@ -66,7 +66,7 @@
     }
 }
 
-@keyframes fadeOut {
+@keyframes yourTurn-fadeOut {
     0% {
         opacity: 1
     }
@@ -78,7 +78,9 @@
 
 :root {
     --yourTurnPlayerColor: rgba(95, 158, 160, 1);
-    --yourTurnPlayerColorTransparent: rgba(95, 158, 160, .5)
+    --yourTurnPlayerColorTransparent: rgba(95, 158, 160, .5);
+    --yourTurnImgWidth: 100px;
+    --yourTurnImgHeight: 100px;
 }
 
 .yourTurnContainer {
@@ -96,11 +98,8 @@
 }
 
 .yourTurnBanner {
-    margin-left: 400px;
-    padding-right: 400px;
-    margin-top: 140px;
-    margin-bottom: 140px;
-    height: 105px
+    margin-left: -20rem;
+    margin-top: 10rem
 }
 
 .yourTurnBannerBackground {
@@ -116,35 +115,36 @@
     border-bottom-width: 5px;
     border-bottom: var(--yourTurnPlayerColor);
     border-bottom-style: solid;
-    animation-name: backgroundColor;
+    animation-name: yourTurn-backgroundColor;
     animation-duration: 3s;
     animation-fill-mode: forwards;
     z-index: -1
 }
 
 .yourTurnBanner.removing,.yourTurnBannerBackground.removing {
-    animation-name: backgroundDisappear;
+    animation-name: yourTurn-backgroundDisappear;
     animation-duration: 3s;
     animation-fill-mode: forwards
 }
 
 .yourTurnBanner.removing {
     opacity: 1;
-    animation-name: fadeOut
+    animation-name: yourTurn-fadeOut
 }
 
 .yourTurnImg {
     position: absolute;
     object-fit: scale-down;
     border-width: 0;
-    width: 500px;
-    height: 500px;
+    width: var(--yourTurnImgWidth);
+    height: var(--yourTurnImgHeight);
+    margin-left: -45rem;
     z-index: 1000;
     opacity: .001
 }
 
 .yourTurnImg.adding {
-    animation-name: imgSlideDown;
+    animation-name: yourTurn-imgSlideDown;
     animation-duration: 2s;
     animation-fill-mode: forwards;
     animation-timing-function: cubic-bezier(.34,1.56,.64,1)
@@ -152,9 +152,9 @@
 
 .yourTurnImg.removing {
     opacity: 1;
-    width: 400px;
-    height: 400px;
-    animation-name: fadeOut;
+    width: var(--yourTurnImgWidth);
+    height: var(--yourTurnImgHeight);
+    animation-name: yourTurn-fadeOut;
     animation-delay: 1.5s;
     animation-duration: 3s;
     animation-fill-mode: forwards

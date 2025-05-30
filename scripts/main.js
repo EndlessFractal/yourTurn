@@ -15,8 +15,8 @@ export default class TurnSubscriber {
     static currentImgID = null;
     static nextImgID;
     static expectedNext;
-    static startCounterAtOne;
-    static useTokens;
+    static lastHiddenCombatId = null;
+    static lastHiddenRound = null;
     // Static method that starts the turn tracking
     static begin() {
         Hooks.on("ready", () => {
@@ -28,9 +28,6 @@ export default class TurnSubscriber {
                 Hooks.on("updateCombat", (combat, update, options, userId) => {
                     this._onUpdateCombat(combat, update, options, userId);
                 });
-                // Store the settings values
-                this.startCounterAtOne = Settings.startCounterAtOne;
-                this.useTokens = Settings.useTokens;
             });
         });
     }
@@ -52,15 +49,13 @@ export default class TurnSubscriber {
             });
         }
     }
-    // Static method that returns the HTML for a token image
-    static getTokenImage(token) {
-        const scale = token.getFlag("core", "tokenHUD.scale") || 1;
-        const img = token.data.img;
-        const size = Math.ceil(canvas.dimensions.size * scale);
-        return `<img src="${img}" width="${size}" height="${size}" />`;
-    }
     // Static method that handles the updateCombat hook
     static _onUpdateCombat(combat, update, options, userId) {
+        // Reset hidden tracking if new combat started
+        if (this.lastHiddenCombatId !== combat.id) {
+            this.lastHiddenCombatId = combat.id;
+            this.lastHiddenRound = null;
+        }
         // Check if the turn or round has changed
         if (!update["turn"] && !update["round"]) return;
         // Check if the combat has started
@@ -69,34 +64,43 @@ export default class TurnSubscriber {
         if (combat.combatant === this.lastCombatant) return;
         // Update the lastCombatant property to the current combatant
         this.lastCombatant = combat.combatant;
-        // Get the image of the current combatant's actor
-        this.image = Settings.getUseTokens() ? (combat?.combatant.actor.token?.texture.src ?? combat?.combatant.actor.img) : combat?.combatant.actor.img;
+        // Store “next” for later comparison
+        this.expectedNext = combat.nextCombatant;
+        // Get the image of the current combatant (token if desired, else actor)
+        this.image = Settings.getUseTokens() ? (combat.combatant.token?.texture?.src ?? combat.combatant.actor.img) : combat.combatant.actor.img;
         // Get the name of the current combatant
-        let ytName = combat?.combatant.name;
+        let ytName = combat.combatant.name;
         // Initialize the ytText and ytImgClass variables
         let ytText = "";
         const ytImgClass = ["adding"];
         // Check if the Combat Utility Belt module is active
         if (game.modules.get("combat-utility-belt")?.active) {
             // Check if the combatant's name should be replaced
-            if (game.cub.hideNames.shouldReplaceName(combat?.combatant?.actor)) {
-                ytName = game.cub.hideNames.getReplacementName(combat?.combatant?.actor);
+            if (game.cub.hideNames.shouldReplaceName(combat.combatant.actor)) {
+                ytName = game.cub.hideNames.getReplacementName(combat.combatant.actor);
             }
         }
-        // Check if the combatant is defeated        
-        if (combat?.combatant?.defeated) {
+        // Check if the combatant is defeated
+        if (combat.combatant.defeated) {
             // Hide the banner for defeated enemies
             this.hideBanner();
             return;
         }
         // Determine the text to be displayed based on the current combatant
-        if (combat?.combatant) {
+        if (combat.combatant) {
             if (combat.combatant.isOwner && !game.user.isGM && combat.combatant.players[0]?.active) {
                 ytText = `${game.i18n.localize("YOUR-TURN.YourTurn")}, ${ytName}!`;
             } else if (combat.combatant.hidden) {
                 if (!game.user.isGM && !Settings.getHideNextUpHidden()) {
-                    ytText = game.i18n.localize("YOUR-TURN.SomethingHappens");
-                    this.showHidden();
+                    // Only show if not shown in this round yet
+                    if (this.lastHiddenRound !== combat.round) {
+                        ytText = game.i18n.localize("YOUR-TURN.SomethingHappens");
+                        this.showHidden();
+                        this.lastHiddenRound = combat.round; // Update tracking
+                    } else {
+                        this.hideBanner();
+                        return;
+                    }
                 } else {
                     this.hideBanner();
                     return;
@@ -105,9 +109,9 @@ export default class TurnSubscriber {
                 ytText = `${ytName}'s ${game.i18n.localize("YOUR-TURN.Turn")}!`;
             }
         }
-        // Get the next combatant and the expected next combatant
+        // Get the next combatant
         const nextCombatant = this.getNextCombatant(combat);
-        const expectedNext = combat?.nextCombatant;
+        const expectedNext = this.expectedNext;
         // Get or create the container element for the turn display
         let container = document.getElementById("yourTurnContainer");
         if (!container) {
@@ -115,14 +119,13 @@ export default class TurnSubscriber {
             const uiTOP = document.getElementById("ui-top");
             containerDiv.id = "yourTurnContainer";
             uiTOP.appendChild(containerDiv);
-            container = document.getElementById("yourTurnContainer");
         }
         // Check and delete the current and next turn images
         this.checkAndDelete(this.currentImgID);
         this.checkAndDelete("yourTurnBanner");
         const nextImg = document.getElementById(this.nextImgID);
         if (nextImg) {
-            if (combat?.combatant !== this.expectedNext) {
+            if (combat.combatant !== expectedNext) {
                 nextImg.remove();
                 this.currentImgID = null;
             } else {
@@ -132,12 +135,12 @@ export default class TurnSubscriber {
         // Increment the image count and generate the ID for the next image
         this.imgCount += 1;
         this.nextImgID = `yourTurnImg${this.imgCount}`;
-        // Check if tokens should be used instead of actor images
+        // Check if tokens should be used for the next combatant
         let imageHTML;
-        if (Settings.getUseTokens() && combat?.combatant?.actor?.token) {
-            imageHTML = combat.combatant.actor.token.texture.src || combat.combatant.actor.img;
+        if (Settings.getUseTokens() && nextCombatant?.token) {
+            imageHTML = nextCombatant.token.texture?.src || nextCombatant.actor.img;
         } else {
-            imageHTML = expectedNext?.actor?.img;
+            imageHTML = nextCombatant?.actor?.img;
         }
         // Create the HTML element for the next image
         const imgHTML = document.createElement("img");
@@ -155,15 +158,24 @@ export default class TurnSubscriber {
         }
         // Create the banner HTML element
         const bannerDiv = document.createElement("div");
-        const turnNumber = Settings.getStartCounterAtOne() ? combat.turn + 1 : combat.turn;
+        const baseTurnNumber = this.computeCustomTurnNumber(combat);
+        const turnNumber = Settings.getStartCounterAtOne() ? baseTurnNumber : baseTurnNumber - 1;
         bannerDiv.id = "yourTurnBanner";
         bannerDiv.className = "yourTurnBanner";
         bannerDiv.style.height = "150px";
-        bannerDiv.innerHTML = `<p id="yourTurnText" class="yourTurnText">${ytText}</p><div class="yourTurnSubheading">${game.i18n.localize("YOUR-TURN.Round")} #${combat.round} ${game.i18n.localize("YOUR-TURN.Turn")} #${turnNumber}</div>${this.getNextTurnHtml(nextCombatant)}<div id="yourTurnBannerBackground" class="yourTurnBannerBackground" height="150"></div>`;
+        bannerDiv.innerHTML = `
+            <p id="yourTurnText" class="yourTurnText">${ytText}</p>
+            <div class="yourTurnSubheading">
+            ${game.i18n.localize("YOUR-TURN.Round")} #${combat.round}
+            ${game.i18n.localize("YOUR-TURN.Turn")} #${turnNumber}
+            </div>
+            ${this.getNextTurnHtml(nextCombatant)}
+            <div id="yourTurnBannerBackground" class="yourTurnBannerBackground" height="150"></div>
+        `;
         // Set the CSS variables for player and GM colors
         const r = document.querySelector(":root");
-        if (combat?.combatant?.hasPlayerOwner && combat?.combatant?.players[0].active) {
-            const ytPlayerColor = combat?.combatant?.players[0]["color"];
+        if (combat.combatant.hasPlayerOwner && combat.combatant.players[0].active) {
+            const ytPlayerColor = combat.combatant.players[0].color;
             r.style.setProperty("--yourTurnPlayerColor", ytPlayerColor);
             r.style.setProperty("--yourTurnPlayerColorTransparent", ytPlayerColor + "80");
         } else {
@@ -184,6 +196,27 @@ export default class TurnSubscriber {
             this.unloadImage();
         }, 4000);
     }
+    // Calculate custom turn number treating hidden creatures as one turn
+    static computeCustomTurnNumber(combat) {
+        if (!combat || !combat.turns || combat.turn === null) {
+            return 0;
+        }
+        let visibleTurns = 0;
+        let hasHidden = false;
+        for (let i = 0; i <= combat.turn; i++) {
+            const combatant = combat.turns[i];
+            // Skip defeated combatants
+            if (combatant.defeated) {
+                continue;
+            }
+            if (combatant.hidden) {
+                hasHidden = true;
+            } else {
+                visibleTurns++;
+            }
+        }
+        return visibleTurns + (hasHidden ? 1 : 0);
+    }
     static showHidden() {
         const container = document.getElementById("yourTurnContainer");
         // Check if the container exists
@@ -203,16 +236,6 @@ export default class TurnSubscriber {
         if (bannerDiv) {
             bannerDiv.innerHTML = '';
         }
-    }
-    // Static method that loads the image for the next turn
-    static loadNextImage(combat) {
-        const nextTurn = combat.turn + 1;
-        const hiddenImgHTML = `<div id="yourTurnPreload"><img id="yourTurnPreloadImg" src=${combat?.turns[(combat.turn + 1) % combat.turns.length].actor.img} loading="eager" width="800" height="800"></img><div>`;
-        const yourTurnPreloadDiv = document.querySelector("div#yourTurnPreload");
-        if (yourTurnPreloadDiv) {
-            yourTurnPreloadDiv.remove();
-        }
-        $("body").append(hiddenImgHTML);
     }
     // Static method that unloads the current image
     static unloadImage() {
