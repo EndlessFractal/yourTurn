@@ -79,8 +79,8 @@
 :root {
     --yourTurnPlayerColor: rgba(95, 158, 160, 1);
     --yourTurnPlayerColorTransparent: rgba(95, 158, 160, .5);
-    --yourTurnImgWidth: 100px;
-    --yourTurnImgHeight: 100px;
+    --yourTurnImgWidth: 380px;
+    --yourTurnImgHeight: 380px;
 }
 
 .yourTurnContainer {
@@ -139,6 +139,7 @@
     width: var(--yourTurnImgWidth);
     height: var(--yourTurnImgHeight);
     margin-left: -45rem;
+    margin-top: 1rem;
     z-index: 1000;
     opacity: .001
 }
