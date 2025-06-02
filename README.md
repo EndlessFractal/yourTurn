@@ -26,7 +26,8 @@ Enhance your Foundry VTT sessions with visual turn notifications. This module di
 2. Click **Install Module**
 3. Paste this URL:  
    `https://github.com/EndlessFractal/yourTurn/releases/download/latest/module.json`
-4. Activate the module in your world settings
+4. Press Install.
+5. Activate the module in your world settings
 
 ## About This Project
 
