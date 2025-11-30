@@ -20,6 +20,9 @@ export default class TurnSubscriber {
     // Static method that starts the turn tracking
     static begin() {
         Hooks.on("ready", () => {
+            const size = Settings.getImgSize() + "px";
+            document.documentElement.style.setProperty("--yourTurnImgWidth", size);
+            document.documentElement.style.setProperty("--yourTurnImgHeight", size);
             // Wait for the GM to be available
             this.waitForGM().then((gm) => {
                 // Store the GM color

@@ -1,24 +1,21 @@
 @keyframes yourTurn-imgSlideDown {
     0% {
-        width: calc(var(--yourTurnImgWidth) + 200px);
-        height: calc(var(--yourTurnImgWidth) + 200px);
-        opacity: 0
+        transform: scale(1.5);
+        opacity: 0;
     }
 
     20% {
-        width: calc(var(--yourTurnImgWidth) + 100px);
-        height: calc(var(--yourTurnImgWidth) + 100px);
-        opacity: 0
+        transform: scale(1.2);
+        opacity: 0;
     }
 
     50% {
-        opacity: 1
+        opacity: 1;
     }
 
-    to {
-        width: var(--yourTurnImgWidth);
-        height: var(--yourTurnImgHeight);
-        opacity: 1
+    100% {
+        transform: scale(1);
+        opacity: 1;
     }
 }
 
@@ -133,13 +130,13 @@
 }
 
 .yourTurnImg {
-    position: absolute;
+    position: fixed;
     object-fit: scale-down;
     border-width: 0;
     width: var(--yourTurnImgWidth);
     height: var(--yourTurnImgHeight);
     margin-left: -45rem;
-    margin-top: 1rem;
+    margin-top: 5rem;
     z-index: 1000;
     opacity: .001
 }

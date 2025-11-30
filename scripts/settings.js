@@ -32,6 +32,15 @@ const settings = {
         type: Boolean,
         default: false
     },
+    imgSize: {
+        name: 'Turn Banner Image Size (px)',
+        hint: 'Image Size of the actor/token image. After applying don\'t forget to reload the page (F5).',
+        scope: 'client',
+        config: true,
+        type: Number,
+        range: { min: 280, max: 400, step: 10 },
+        default: 380
+    }
 };
 export class Settings {
     static getStartCounterAtOne() {
@@ -45,6 +54,9 @@ export class Settings {
     }
     static getHideNextUp() {
         return game.settings.get(modName, 'hideNextUp');
+    }
+    static getImgSize() {
+        return game.settings.get(modName, 'imgSize');
     }
     static registerSettings() {
         for (const [name, setting] of Object.entries(settings)) {
