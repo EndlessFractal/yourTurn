@@ -18,7 +18,7 @@ const settings = {
     },
     hideNextUpHidden: {
         name: 'Hide Banner for Hidden Combatants',
-        hint: 'Toogle to hide all turn details for hidden combatants. When disabled, shows a generic \'Something happens\' message once per round for hidden combatants. Default is True.',
+        hint: 'Toggle to hide all turn details for hidden combatants. When disabled, shows a generic \'Something happens\' message once per round for hidden combatants. Default is True.',
         scope: 'world',
         config: true,
         type: Boolean,
