@@ -2,60 +2,75 @@
 
 ![Module Demo](https://i.imgur.com/IGbA0jO.gif)
 
-Enhance your Foundry VTT sessions with visual turn notifications. This module displays a customizable banner when combat turns change, improving gameplay awareness for all players.
+Enhance your Foundry VTT sessions with smooth, animated turn notifications. This module displays a customizable banner and character portrait whenever the combat turn changes, keeping everyone focused on the action.
 
 ## Features
 
-- **Visual Turn Indicator**: Clear display during combat transitions
-- **Customization Options**:
-  - Start turn counter at 1 instead of 0
+- **Clear Visual Turn Indicator**
+  - An animated banner and character image appear when a new turn begins, then fade out automatically.
+
+- **Customization Options**
+  - Start turn counter at 1 or 0
   - Use token artwork instead of actor portraits
-  - Hide "Next Up" information completely
-  - Special handling for hidden enemies:
-    - Hide banners entirely OR
-    - Display "Something is happening..." text with custom image (player-only)
-- **Multilingual Support**:
-  - English
-  - German
-  - French
-  - Simplified Chinese
+  - Hide the "Next Up" combatant information
+  - Adjust the size of the displayed image (280–400 px)
+
+- **Hidden Enemies Handling**
+  - Option to hide the banner entirely for hidden combatants
+  - Alternative: display a generic "Something happens…" message (once per round) with a mystery icon – only visible to players
+
+- **Improved Performance & Compatibility**
+  - Reuses elements instead of creating new ones each turn
+  - Compatibility with the **Carousel Combat Tracker** module
+  - Cleanup when combat ends
+
+- **Multilingual Support**
+  English, German, French, and Simplified Chinese.
 
 ## Installation
 
-1. In Foundry VTT, navigate to **Add-on Modules**
+1. In Foundry VTT, go to **Add-on Modules**
 2. Click **Install Module**
-3. Paste this URL:  
-   `https://github.com/EndlessFractal/yourTurn/releases/download/latest/module.json`
-4. Press Install.
-5. Activate the module in your world settings
+3. Paste this manifest URL:
+   > `https://github.com/EndlessFractal/yourTurn/releases/download/latest/module.json`
+4. Click **Install**
+5. Activate the module in your world's module settings
 
-## About This Project
+## Configuration
 
-This module was adopted to:
-- Address unresolved issues from the original implementation
-- Add new customization features
-- Provide ongoing maintenance
-- Further my FoundryVTT development skills
+After activation, you can adjust settings under **Game Settings → Module Settings → Your Turn!**.
 
-Built upon [Autmor's original work](https://github.com/Autmor), this version includes:
-- Critical bug fixes
-- Enhanced customization options
-- Improved system compatibility
-- Active maintenance
+| Setting | Description |
+|---------|-------------|
+| Start Turn Counter at 1 | When enabled, the displayed turn number begins at 1 instead of 0. |
+| Use Tokens Instead of Artwork | Show token images instead of the actor's default portrait. |
+| Hide Banner for Hidden Combatants | Completely hides the banner for hidden enemies. |
+| Hide "Next Up" | Remove the line that shows who acts next. |
+| Turn Banner Image Size (px) | Width and height of the character image (280–400 px). **Reload the page (F5) after changing.** |
+
+## Usage
+
+- Works automatically with any combat encounter that uses Foundry's built-in combat tracker.
+- When a combatant is hidden and the setting *Hide Banner for Hidden Combatants* is **off**, players see a generic "Something happens…" message with a hidden icon, once per round.
+- The banner and image fade out after 4 seconds.
 
 ## Support & Contribution
 
 ### Reporting Issues
-Please report bugs/requests through [GitHub Issues](https://github.com/EndlessFractal/yourTurn/issues). Note:
-- Not all game systems may be supported
-- Feature requests may take time to implement
+Please report bugs or feature requests via [GitHub Issues](https://github.com/EndlessFractal/yourTurn/issues).
+When reporting, include:
+- Foundry version and game system
+- Any error messages from the console (F12)
+- Steps to reproduce the issue
 
 ### Contributing
 Contributions are welcome! Feel free to:
 - Submit pull requests
-- Help address existing issues
-- Improve localization
+- Help with localization
+- Test and report compatibility with other modules
 
 ## Credits
-- Original concept: [Autmor](https://github.com/Autmor)
-- Hidden actor icon: [Game-Icons.net](https://game-icons.net/1x1/lorc/hidden.html)
+
+- **Original author:** [Autmor](https://github.com/Autmor)
+- **Current maintainer:** [EndlessFractal](https://github.com/EndlessFractal)
+- **Hidden actor icon:** [Game-Icons.net](https://game-icons.net/1x1/lorc/hidden.html)

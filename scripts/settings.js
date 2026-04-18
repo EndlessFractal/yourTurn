@@ -34,12 +34,12 @@ const settings = {
     },
     imgSize: {
         name: 'Turn Banner Image Size (px)',
-        hint: 'Image Size of the actor/token image. After applying don\'t forget to reload the page (F5).',
+        hint: 'Image Size of the actor/token image. Reload the page (F5) after applying! Default is 340.',
         scope: 'client',
         config: true,
         type: Number,
         range: { min: 280, max: 400, step: 10 },
-        default: 380
+        default: 340
     }
 };
 export class Settings {

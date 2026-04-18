@@ -76,8 +76,8 @@
 :root {
     --yourTurnPlayerColor: rgba(95, 158, 160, 1);
     --yourTurnPlayerColorTransparent: rgba(95, 158, 160, .5);
-    --yourTurnImgWidth: 380px;
-    --yourTurnImgHeight: 380px;
+    --yourTurnImgWidth: 340px;
+    --yourTurnImgHeight: 340px;
 }
 
 .yourTurnContainer {
@@ -95,7 +95,7 @@
 }
 
 .yourTurnBanner {
-    margin-left: -20rem;
+    margin-left: -32rem;
     margin-top: 10rem
 }
 
@@ -106,12 +106,8 @@
     background-color: var(--yourTurnPlayerColorTransparent);
     background-blend-mode: soft-light;
     background-repeat: repeat;
-    border-top: var(--yourTurnPlayerColor);
-    border-top-width: 5px;
-    border-top-style: solid;
-    border-bottom-width: 5px;
-    border-bottom: var(--yourTurnPlayerColor);
-    border-bottom-style: solid;
+    border-top: 5px solid var(--yourTurnPlayerColor);
+    border-bottom: 5px solid var(--yourTurnPlayerColor);
     animation-name: yourTurn-backgroundColor;
     animation-duration: 3s;
     animation-fill-mode: forwards;
@@ -135,7 +131,7 @@
     border-width: 0;
     width: var(--yourTurnImgWidth);
     height: var(--yourTurnImgHeight);
-    margin-left: -45rem;
+    margin-left: -55rem;
     margin-top: 5rem;
     z-index: 1000;
     opacity: .001
@@ -191,7 +187,6 @@
     display: inline-flex;
     justify-content: space-evenly;
     font-size: 18pt;
-    max-height: 27;
     width: auto;
     margin-inline-start: 0;
     padding-right: 5px
@@ -210,21 +205,11 @@
 
 .yourTurnSubheading.yourTurnImg {
     position: relative;
-    height: 100px;
-    width: 100px;
+    height: 90px;
+    width: 90px;
     border-width: 0;
-    bottom: 40px;
+    bottom: 30px;
     opacity: 1;
     object-fit: scale-down;
     animation: none;
-    image-rendering: optimizeSpeed
-}
-
-.yourTurnPreload,.yourTurnPreloadImg {
-    position: absolute;
-    left: 9999px;
-    width: 500px;
-    height: 500px;
-    min-width: 500px;
-    min-height: 500px
 }
