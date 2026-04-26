@@ -1,7 +1,8 @@
 {
-    "YOUR-TURN.Round": "Runde",
-    "YOUR-TURN.Turn": "Zug",
     "YOUR-TURN.NextUp": "Als Nächstes",
+    "YOUR-TURN.Round": "Runde",
     "YOUR-TURN.SomethingHappens": "Irgendetwas passiert gerade...",
+    "YOUR-TURN.Turn": "Zug",
+    "YOUR-TURN.Unknown":  "Unbekannt",
     "YOUR-TURN.YourTurn": "Du bist am Zug"
 }

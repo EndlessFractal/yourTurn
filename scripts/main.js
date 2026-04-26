@@ -1,3 +1,6 @@
+// Import custom patches
+import "./aux.js"
+
 // Importing the Settings module from "./settings.js"
 import { Settings } from "./settings.js";
 
@@ -147,8 +150,8 @@ export default class TurnSubscriber {
             ? combatant.token.texture.src
             : combatant.actor?.img;
 
-        // Build the display name (Combat Utility Belt name‐hiding removed for simplicity)
-        let ytName = combatant.name;
+        // Build the display name
+        let ytName = this.getCombatantDisplayName(combatant);
 
         let ytText = "";
 
@@ -250,7 +253,7 @@ export default class TurnSubscriber {
     static getNextTurnHtml(nextCombatant) {
         if (Settings.getHideNextUp() || !nextCombatant) return "";
 
-        let name = nextCombatant.name;
+        let name = TurnSubscriber.getCombatantDisplayName(nextCombatant);
 
         const useTokens = Settings.getUseTokens();
         let nextSrc = useTokens && nextCombatant.token?.texture?.src
@@ -281,6 +284,11 @@ export default class TurnSubscriber {
 
         if (combatant.hidden || combatant.defeated) return null;
         return combatant;
+    }
+
+    // For aux.js usage
+    static getCombatantDisplayName(combatant) {
+        return combatant.name;
     }
 
     // Calculate custom turn number (counts only non‑defeated combatants)
