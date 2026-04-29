@@ -1,3 +1,6 @@
+// Import custom patches
+import "./aux.js"
+
 // Importing the Settings module from "./settings.js"
 import { Settings } from "./settings.js";
 
@@ -92,6 +95,18 @@ export default class TurnSubscriber {
         });
     }
 
+    // Static method that initializes configuration
+    static config() {
+        return {
+            showNextUp: true,
+            showTurnNumber: true,
+            imageMarginTop: '',
+            bannerMarginTop: '',
+            skipNextCombatant: false,
+            getCombatantDisplayNameFn: null
+        };
+    }
+
     // Static method that resets all state and clears timers
     static cleanup() {
         if (this.myTimer) {
@@ -147,8 +162,8 @@ export default class TurnSubscriber {
             ? combatant.token.texture.src
             : combatant.actor?.img;
 
-        // Build the display name (Combat Utility Belt name‐hiding removed for simplicity)
-        let ytName = combatant.name;
+        // Build the display name
+        let ytName = this.getCombatantDisplayName(combatant);
 
         let ytText = "";
 
@@ -172,7 +187,12 @@ export default class TurnSubscriber {
                 return;
             }
         } else {
-            ytText = `${ytName}'s ${game.i18n.localize("YOUR-TURN.Turn")}!`;
+            const localizedTurn = game.i18n.localize("YOUR-TURN.Turn");
+            if (Settings.getUsePossessive()) {
+                ytText = `${ytName}'s ${localizedTurn}!`;
+            } else {
+                ytText = `${ytName} ${localizedTurn}!`;
+            }
         }
 
         // Find the "next" combatant (skipping hidden/defeated entries as needed)
@@ -201,6 +221,8 @@ export default class TurnSubscriber {
         // Force reflow to restart animation
         void this.currentImg.offsetWidth;
         this.currentImg.classList.add("adding");
+        const margin = this.config().imageMarginTop;
+        if (margin) this.currentImg.style.marginTop = margin;
     }
 
     // Create or refresh the banner DOM element
@@ -210,6 +232,7 @@ export default class TurnSubscriber {
             this.banner = null;
         }
 
+        const config = this.config();
         const bannerDiv = document.createElement("div");
         bannerDiv.id = "yourTurnBanner";
         bannerDiv.className = "yourTurnBanner";
@@ -218,16 +241,24 @@ export default class TurnSubscriber {
         const imgSize = Settings.getImgSize();
         bannerDiv.style.height = `${imgSize + 30}px`;
 
+        // Build subheading: always show round, optionally the turn number
         const baseTurn = this.computeCustomTurnNumber(combat);
         const turnNumber = Settings.getStartCounterAtOne() ? baseTurn : Math.max(0, baseTurn - 1);
+        let subheadingHTML = `${game.i18n.localize("YOUR-TURN.Round")} #${combat.round}`;
+        if (config.showTurnNumber) {
+            subheadingHTML += ` ${game.i18n.localize("YOUR-TURN.Turn")} #${turnNumber}`;
+        }
+
+        // Next‑up line (only if enabled and a valid next combatant exists)
+        let nextUpHTML = "";
+        if (config.showNextUp && nextCombatant) {
+            nextUpHTML = this.getNextTurnHtml(nextCombatant);
+        }
 
         bannerDiv.innerHTML = `
             <p id="yourTurnText" class="yourTurnText">${ytText}</p>
-            <div class="yourTurnSubheading">
-                ${game.i18n.localize("YOUR-TURN.Round")} #${combat.round}
-                ${game.i18n.localize("YOUR-TURN.Turn")} #${turnNumber}
-            </div>
-            ${this.getNextTurnHtml(nextCombatant)}
+            <div class="yourTurnSubheading">${subheadingHTML}</div>
+            ${nextUpHTML}
             <div id="yourTurnBannerBackground" class="yourTurnBannerBackground"></div>
         `;
 
@@ -241,6 +272,9 @@ export default class TurnSubscriber {
             root.style.setProperty("--yourTurnPlayerColor", this.gmColor);
             root.style.setProperty("--yourTurnPlayerColorTransparent", this.gmColor + "80");
         }
+        if (config.bannerMarginTop) {
+            bannerDiv.style.marginTop = config.bannerMarginTop;
+        }
 
         this.container.appendChild(bannerDiv);
         this.banner = bannerDiv;
@@ -250,7 +284,7 @@ export default class TurnSubscriber {
     static getNextTurnHtml(nextCombatant) {
         if (Settings.getHideNextUp() || !nextCombatant) return "";
 
-        let name = nextCombatant.name;
+        let name = TurnSubscriber.getCombatantDisplayName(nextCombatant);
 
         const useTokens = Settings.getUseTokens();
         let nextSrc = useTokens && nextCombatant.token?.texture?.src
@@ -259,7 +293,7 @@ export default class TurnSubscriber {
 
         return `
             <div class="yourTurnSubheading last">
-                ${game.i18n.localize("YOUR-TURN.NextUp")}: 
+                ${game.i18n.localize("YOUR-TURN.NextUp")}:
                 <img class="yourTurnImg yourTurnSubheading" src="${nextSrc}" alt="">
                 ${name}
             </div>`;
@@ -267,6 +301,7 @@ export default class TurnSubscriber {
 
     // Static method that retrieves the next combatant
     static getNextCombatant(combat) {
+        if (this.config().skipNextCombatant) return null;
         if (!combat?.turns?.length) return null;
 
         let j = 1;
@@ -281,6 +316,12 @@ export default class TurnSubscriber {
 
         if (combatant.hidden || combatant.defeated) return null;
         return combatant;
+    }
+
+    // For aux.js usage
+    static getCombatantDisplayName(combatant) {
+        const fn = this.config().getCombatantDisplayNameFn;
+        return fn ? fn(combatant) : combatant.name;
     }
 
     // Calculate custom turn number (counts only non‑defeated combatants)

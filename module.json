@@ -16,7 +16,8 @@
     }
   ],
   "esmodules": [
-    "/scripts/main.js"
+    "/scripts/main.js",
+    "/scripts/aux.js"
   ],
   "styles": [
     "/styles/module.css"

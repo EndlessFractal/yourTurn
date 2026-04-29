@@ -32,6 +32,14 @@ const settings = {
         type: Boolean,
         default: false
     },
+    usePossessive: {
+        name: 'Use Possessive "s"',
+        hint: 'Toggle to include the apostrophe-s (e.g., "Name\'s Turn") or use a space (e.g., "Name Turn"). Disable for languages that do not use the possessive form.',
+        scope: 'world',
+        config: true,
+        type: Boolean,
+        default: true
+    },
     imgSize: {
         name: 'Turn Banner Image Size (px)',
         hint: 'Image Size of the actor/token image. Reload the page (F5) after applying! Default is 340.',
@@ -54,6 +62,9 @@ export class Settings {
     }
     static getHideNextUp() {
         return game.settings.get(modName, 'hideNextUp');
+    }
+    static getUsePossessive() {
+        return game.settings.get(modName, 'usePossessive');
     }
     static getImgSize() {
         return game.settings.get(modName, 'imgSize');
