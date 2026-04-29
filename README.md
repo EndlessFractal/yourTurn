@@ -46,6 +46,7 @@ After activation, you can adjust settings under **Game Settings → Module Setti
 | Use Tokens Instead of Artwork | Show token images instead of the actor's default portrait. |
 | Hide Banner for Hidden Combatants | Completely hides the banner for hidden enemies. |
 | Hide "Next Up" | Remove the line that shows who acts next. |
+| Use Possessive "s" | Toggle to include the apostrophe-s (e.g., "Name\'s Turn") or use a space (e.g., "Name Turn"). Disable for languages that do not use the possessive form. |
 | Turn Banner Image Size (px) | Width and height of the character image (280–400 px). **Reload the page (F5) after changing.** |
 
 ## Usage
