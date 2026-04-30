@@ -7,25 +7,30 @@ Enhance your Foundry VTT sessions with smooth, animated turn notifications. This
 ## Features
 
 - **Clear Visual Turn Indicator**
-  - An animated banner and character image appear when a new turn begins, then fade out automatically.
+  - An animated banner and character image appear when a new turn begins, then fade out automatically after 4 seconds.
 
 - **Customization Options**
-  - Start turn counter at 1 or 0
-  - Use token artwork instead of actor portraits
-  - Hide the "Next Up" combatant information
-  - Adjust the size of the displayed image (280–400 px)
+  - Start turn counter at 1 or 0 (the counter skips defeated combatants).
+  - Toggle to use either token artwork or actor portraits.
+  - Hide the "Next Up" combatant information entirely.
+  - Control how hidden enemies are displayed (see below).
+  - Toggle possessive "'s" for languages that do not use the possessive form.
+  - Adjust the size of the displayed character image (280-400 px).
 
 - **Hidden Enemies Handling**
-  - Option to hide the banner entirely for hidden combatants
-  - Alternative: display a generic "Something happens…" message (once per round) with a mystery icon – only visible to players
+  - You can configure the banner to either:
+    - **Hide it entirely** for hidden combatants (default).
+    - Once per round, when the first hidden combatant's turn begins, show a *"Something happens..."* message with a mystery icon (visible **only to players**).
 
-- **Improved Performance & Compatibility**
-  - Reuses elements instead of creating new ones each turn
-  - Compatibility with the **Carousel Combat Tracker** module
-  - Cleanup when combat ends
+- **Performance & Compatibility**
+  - Compatibility with **Exalted Essence**'s "popcorn initiative".
+  - Compatibility with **PF2e**'s name hiding (token name privacy).
+  - Compatibility with the **Carousel Combat Tracker** module.
+  - Reuses the main container and image elements instead of recreating them each turn; the banner is efficiently refreshed only when needed.
+  - Automatically cleans up when combat ends or is deleted.
 
 - **Multilingual Support**
-  English, German, French, and Simplified Chinese.
+  - English, German, French, and Simplified Chinese.
 
 ## Installation
 
@@ -38,21 +43,21 @@ Enhance your Foundry VTT sessions with smooth, animated turn notifications. This
 
 ## Configuration
 
-After activation, you can adjust settings under **Game Settings → Module Settings → Your Turn!**.
+After activation, adjust settings under **Game Settings → Module Settings → Your Turn!**.
 
 | Setting | Description |
 |---------|-------------|
-| Start Turn Counter at 1 | When enabled, the displayed turn number begins at 1 instead of 0. |
+| Start Turn Counter at 1 | When enabled, the displayed turn number begins at 1 instead of 0. Only **non-defeated** combatants are counted, so defeated creatures are skipped. |
 | Use Tokens Instead of Artwork | Show token images instead of the actor's default portrait. |
-| Hide Banner for Hidden Combatants | Completely hides the banner for hidden enemies. |
+| Hide Banner for Hidden Combatants | Completely hides the banner for hidden enemies. When disabled, players see a *"Something happens..."* message once per round (GMs still see nothing). |
 | Hide "Next Up" | Remove the line that shows who acts next. |
-| Use Possessive "s" | Toggle to include the apostrophe-s (e.g., "Name\'s Turn") or use a space (e.g., "Name Turn"). Disable for languages that do not use the possessive form. |
-| Turn Banner Image Size (px) | Width and height of the character image (280–400 px). **Reload the page (F5) after changing.** |
+| Use Possessive "s" | Toggle to include the apostrophe-s (e.g., "Name's Turn") or use a space (e.g., "Name Turn"). Disable for languages that do not use the possessive form. |
+| Turn Banner Image Size (px) | Width and height of the character image (280-400 px). **Reload the page (F5) after changing.** |
 
 ## Usage
 
 - Works automatically with any combat encounter that uses Foundry's built-in combat tracker.
-- When a combatant is hidden and the setting *Hide Banner for Hidden Combatants* is **off**, players see a generic "Something happens…" message with a hidden icon, once per round.
+- When a combatant is hidden and the setting **Hide Banner for Hidden Combatants** is **off**, players see a generic *"Something happens..."* message with a hidden icon, once per round. GMs see no banner at all for hidden combatants.
 - The banner and image fade out after 4 seconds.
 
 ## Support & Contribution

@@ -2,7 +2,7 @@
   "id": "your-turn",
   "title": "Your Turn!",
   "description": "Enhance your Foundry VTT sessions with smooth, animated turn notifications. This module displays a customizable banner and character portrait whenever the combat turn changes, keeping everyone focused on the action.",
-  "version": "1.4.1",
+  "version": "${version}",
   "compatibility": {
     "minimum": "14",
     "verified": "14"
@@ -45,6 +45,6 @@
     }
   ],
   "url": "https://github.com/EndlessFractal/yourTurn",
-  "download": "https://github.com/EndlessFractal/yourTurn/releases/download/latest/module.zip",
-  "manifest": "https://github.com/EndlessFractal/yourTurn/releases/download/latest/module.json"
+  "download": "${download}",
+  "manifest": "${manifest}"
 }
