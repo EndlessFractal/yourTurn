@@ -4,7 +4,7 @@
   "description": "Enhance your Foundry VTT sessions with smooth, animated turn notifications. This module displays a customizable banner and character portrait whenever the combat turn changes, keeping everyone focused on the action.",
   "version": "${version}",
   "compatibility": {
-    "minimum": "14",
+    "minimum": "13",
     "verified": "14"
   },
   "authors": [
