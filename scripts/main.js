@@ -59,18 +59,21 @@ export default class TurnSubscriber {
         const uiTOP = document.getElementById("ui-top");
         if (uiTOP) uiTOP.appendChild(this.container);
 
-        // Compatibility override for Carousel Combat Tracker module
-        const styleId = "yourTurn-compat-override";
-        if (!document.getElementById(styleId)) {
-            const style = document.createElement("style");
-            style.id = styleId;
-            style.textContent = `
-                #ui-top #yourTurnContainer {
-                    display: block !important;
-                    margin-top: -10rem;
-                }
-            `;
-            document.head.appendChild(style);
+        // Compatibility override for Carousel Combat Tracker module (only if active)
+        const combatTrackerDock = game.modules.get("combat-tracker-dock");
+        if (combatTrackerDock?.active) {
+            const styleId = "yourTurn-compat-override";
+            if (!document.getElementById(styleId)) {
+                const style = document.createElement("style");
+                style.id = styleId;
+                style.textContent = `
+                    #ui-top #yourTurnContainer {
+                        display: block !important;
+                        margin-top: -10rem;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
         }
 
         this.currentImg = document.createElement("img");
