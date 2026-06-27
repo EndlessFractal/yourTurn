@@ -10,8 +10,8 @@ Hooks.once('ready', () => {
         TurnSubscriber.config = () => ({
             showNextUp: false,
             showTurnNumber: false,
-            imageMarginTop: '15rem',
-            bannerMarginTop: '20rem',
+            imageMarginTop: '5rem',
+            bannerMarginTop: '10rem',
             skipNextCombatant: true,
             getCombatantDisplayNameFn: null
         });
@@ -19,8 +19,8 @@ Hooks.once('ready', () => {
         TurnSubscriber.config = () => ({
             showNextUp: true,
             showTurnNumber: true,
-            imageMarginTop: '15rem',
-            bannerMarginTop: '20rem',
+            imageMarginTop: '5rem',
+            bannerMarginTop: '10rem',
             skipNextCombatant: false,
             // PF2e: hide actor name when token privacy demands it
             getCombatantDisplayNameFn: (combatant) => {
