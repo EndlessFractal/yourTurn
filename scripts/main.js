@@ -14,7 +14,7 @@ export default class TurnSubscriber {
     static myTimer = null;
 
     // State tracking
-    static lastCombatant = null;
+    static lastProcessedTurn = null;
     static lastHiddenRound = null;
     static lastCombatId = null;
 
@@ -38,14 +38,15 @@ export default class TurnSubscriber {
 
                 // Hook that triggers when the combat is updated
                 Hooks.on("updateCombat", (combat, update, options, userId) => {
+                    if (!combat.started || !combat.active) {
+                        this.cleanup();
+                        return;
+                    }
                     this._onUpdateCombat(combat, update, options, userId);
                 });
 
-                // Cleanup when combat ends or is deleted
+                // Cleanup when combat is deleted
                 Hooks.on("deleteCombat", () => this.cleanup());
-                Hooks.on("updateCombat", (combat) => {
-                    if (!combat.started || !combat.active) this.cleanup();
-                });
             });
         });
     }
@@ -120,7 +121,7 @@ export default class TurnSubscriber {
             this.banner.remove();
             this.banner = null;
         }
-        this.lastCombatant = null;
+        this.lastProcessedTurn = null;
         this.lastHiddenRound = null;
         this.lastCombatId = null;
     }
@@ -134,22 +135,21 @@ export default class TurnSubscriber {
         }
 
         // Only proceed if the turn or round has changed
-        if (!update?.turn && !update?.round) return;
-        // Only proceed if combat is started
-        if (!combat.started) {
-            this.cleanup();
-            return;
-        }
+        if (!update || (!('turn' in update) && !('round' in update))) return;
 
-        // Avoid processing the same combatant twice
-        if (combat.combatant === this.lastCombatant) return;
-        this.lastCombatant = combat.combatant;
+        // Avoid processing the same turn twice
+        const currentTurnId = `${combat.round}-${combat.turn}`;
+        if (currentTurnId === this.lastProcessedTurn) return;
+        this.lastProcessedTurn = currentTurnId;
 
         this.updateForNewTurn(combat);
     }
 
     // Core logic: show or hide banner based on combatant state
     static updateForNewTurn(combat) {
+        // Always record dedup key so direct calls (e.g. Exalted toggleTurnOver) won't cause double-processing when the normal hook fires later.
+        this.lastProcessedTurn = `${combat.round}-${combat.turn}`;
+
         const combatant = combat.combatant;
         if (!combatant) return;
 
@@ -171,7 +171,8 @@ export default class TurnSubscriber {
         let ytText = "";
 
         // Determine the banner text based on ownership, hidden status, etc.
-        if (combatant.isOwner && !game.user.isGM && combatant.players?.[0]?.active) {
+        if (combatant.isOwner && !game.user.isGM &&
+            combatant.players?.some(p => p.id === game.user.id && p.active)) {
             ytText = `${game.i18n.localize("YOUR-TURN.YourTurn")}, ${ytName}!`;
         } else if (combatant.hidden) {
             // Hidden combatant handling
@@ -198,24 +199,29 @@ export default class TurnSubscriber {
             }
         }
 
-        // Find the "next" combatant (skipping hidden/defeated entries as needed)
-        const nextCombatant = this.getNextCombatant(combat);
+        // Compute config once and reuse it, rather than re-invoking (and re-allocating) it separately in each helper below.
+        const config = this.config();
+
+        // Find the "next" combatant, but only if it will be displayed (skipping hidden/defeated entries as needed).
+        const nextCombatant = (config.showNextUp && !Settings.getHideNextUp())
+            ? this.getNextCombatant(combat, config)
+            : null;
 
         // Ensure UI exists
         if (!this.container || !this.currentImg) this.initializeUI();
 
         // Apply CSS animation when changing the main image
-        this.updateCurrentImage(currentSrc);
+        this.updateCurrentImage(currentSrc, config);
 
         // Create or refresh the banner DOM element
-        this.updateBanner(combat, ytText, nextCombatant);
+        this.updateBanner(combat, ytText, nextCombatant, config);
 
         // Restart the unload timer so the image/banner will fade out after 4 seconds
         this.startUnloadTimer();
     }
 
     // Apply CSS animation when changing the main image
-    static updateCurrentImage(src) {
+    static updateCurrentImage(src, config = this.config()) {
         if (!this.currentImg) return;
 
         this.currentImg.classList.remove("adding", "removing");
@@ -224,18 +230,17 @@ export default class TurnSubscriber {
         // Force reflow to restart animation
         void this.currentImg.offsetWidth;
         this.currentImg.classList.add("adding");
-        const margin = this.config().imageMarginTop;
+        const margin = config.imageMarginTop;
         if (margin) this.currentImg.style.marginTop = margin;
     }
 
     // Create or refresh the banner DOM element
-    static updateBanner(combat, ytText, nextCombatant) {
+    static updateBanner(combat, ytText, nextCombatant, config = this.config()) {
         if (this.banner) {
             this.banner.remove();
             this.banner = null;
         }
 
-        const config = this.config();
         const bannerDiv = document.createElement("div");
         bannerDiv.id = "yourTurnBanner";
         bannerDiv.className = "yourTurnBanner";
@@ -266,7 +271,7 @@ export default class TurnSubscriber {
         `;
 
         // Set the CSS variables for player and GM colors
-        const root = document.querySelector(":root");
+        const root = document.documentElement;
         const player = combat.combatant?.players?.[0];
         if (combat.combatant?.hasPlayerOwner && player?.active) {
             root.style.setProperty("--yourTurnPlayerColor", player.color);
@@ -303,22 +308,24 @@ export default class TurnSubscriber {
     }
 
     // Static method that retrieves the next combatant
-    static getNextCombatant(combat) {
-        if (this.config().skipNextCombatant) return null;
+    static getNextCombatant(combat, config = this.config()) {
+        if (config.skipNextCombatant) return null;
         if (!combat?.turns?.length) return null;
 
         let j = 1;
-        let idx = (combat.turn + j) % combat.turns.length;
-        let combatant = combat.turns[idx];
+        while (j < combat.turns.length) {
+            const idx = (combat.turn + j) % combat.turns.length;
+            const combatant = combat.turns[idx];
 
-        while (j < combat.turns.length && (combatant.hidden || combatant.defeated)) {
+            // Return immediately if we find a valid combatant
+            if (!combatant.hidden && !combatant.defeated) {
+                return combatant;
+            }
             j++;
-            idx = (combat.turn + j) % combat.turns.length;
-            combatant = combat.turns[idx];
         }
 
-        if (combatant.hidden || combatant.defeated) return null;
-        return combatant;
+        // No valid next combatant found
+        return null;
     }
 
     // For aux.js usage
@@ -340,13 +347,19 @@ export default class TurnSubscriber {
 
     // Static method that hides the banner with a fade-out animation
     static hideBanner() {
-        if (this.banner) {
-            this.banner.classList.add("removing");
-            setTimeout(() => {
-                if (this.banner) this.banner.remove();
+        clearTimeout(this.myTimer);
+        this.myTimer = null;
+
+        const target = this.banner;
+        if (!target) return;
+
+        target.classList.add("removing");
+        setTimeout(() => {
+            if (this.banner === target) {
+                target.remove();
                 this.banner = null;
-            }, 800);
-        }
+            }
+        }, 800);
     }
 
     // Static method that starts the auto‑hide timer

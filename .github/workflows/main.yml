@@ -9,19 +9,26 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      VERSION: ${{ github.event.release.tag_name }}
+      REPO: ${{ github.repository }}
+      MANIFEST_URL: https://github.com/${{ github.repository }}/releases/latest/download/module.json
+      DOWNLOAD_URL: https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/module.zip
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ env.VERSION }}
+          persist-credentials: false
 
       - name: Substitute Manifest and Download Links
-        id: sub_manifest_link_version
         run: |
-          sed -i 's|\${version}|${{ github.event.release.tag_name }}|g' module.json
-          sed -i 's|\${manifest}|https://github.com/${{ github.repository }}/releases/latest/download/module.json|g' module.json
-          sed -i 's|\${download}|https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/module.zip|g' module.json
+          sed -i \
+            -e "s|\${version}|${VERSION}|g" \
+            -e "s|\${manifest}|${MANIFEST_URL}|g" \
+            -e "s|\${download}|${DOWNLOAD_URL}|g" \
+            module.json
 
       - name: Create Module Archive
         run: zip -r ./module.zip *
@@ -29,12 +36,9 @@ jobs:
       - name: Update Versioned Release
         uses: softprops/action-gh-release@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag_name: ${{ github.event.release.tag_name }}
+          tag_name: ${{ env.VERSION }}
           name: ${{ github.event.release.name }}
           body: ${{ github.event.release.body }}
-          draft: false
-          prerelease: false
           files: |
             ./module.json
             ./module.zip
@@ -42,12 +46,31 @@ jobs:
       - name: Update Latest Release
         uses: softprops/action-gh-release@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: latest
           name: Latest
           body: ${{ github.event.release.body }}
-          draft: false
-          prerelease: false
           files: |
             ./module.json
             ./module.zip
+
+      - name: Publish to Foundry VTT
+        run: |
+          MINIMUM=$(jq -r '.compatibility.minimum' module.json)
+          VERIFIED=$(jq -r '.compatibility.verified' module.json)
+          
+          curl -X POST https://foundryvtt.com/_api/packages/release_version/ \
+            -H 'Content-Type: application/json' \
+            -H 'Authorization: ${{ secrets.FOUNDRY_RELEASE_TOKEN }}' \
+            -d '{
+              "id": "your-turn",
+              "release": {
+                "version": "'${VERSION}'",
+                "manifest": "https://github.com/'${REPO}'/releases/download/'${VERSION}'/module.json",
+                "notes": "https://github.com/'${REPO}'/releases/tag/'${VERSION}'",
+                "compatibility": {
+                  "minimum": "'$MINIMUM'",
+                  "verified": "'$VERIFIED'",
+                  "maximum": ""
+                }
+              }
+            }'
