@@ -1,5 +1,5 @@
 // Import custom patches
-import "./aux.js"
+import "./auxiliary.js"
 
 // Importing the Settings module from "./settings.js"
 import { Settings } from "./settings.js";
@@ -328,7 +328,7 @@ export default class TurnSubscriber {
         return null;
     }
 
-    // For aux.js usage
+    // For auxiliary.js usage
     static getCombatantDisplayName(combatant) {
         const fn = this.config().getCombatantDisplayNameFn;
         return fn ? fn(combatant) : combatant.name;
