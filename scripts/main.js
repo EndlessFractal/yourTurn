@@ -1,68 +1,90 @@
-// Import custom patches
-import "./auxiliary.js"
-
-// Importing the Settings module from "./settings.js"
+// Import custom patches and settings
+import { applySystemOverrides } from "./auxiliary.js";
 import { Settings } from "./settings.js";
 
-// Exporting the TurnSubscriber class as the default export of the module
+const BANNER_PADDING_PX = 30;
+const UNLOAD_TIMEOUT_MS = 4000;
+const HIDE_ANIMATION_MS = 800;
+
+// Runs the setup right away if the game is loaded; otherwise, waits until it is.
+function whenReady(fn) {
+    if (game.ready) fn();
+    else Hooks.once("ready", fn);
+}
+
+// Makes text safe to show on the page by replacing special characters.
+function esc(value) {
+    return foundry.utils.escapeHTML(String(value ?? ""));
+}
+
+// Adds transparency to a hex color. Leaves values it doesn't recognize unchanged.
+function withAlpha(hex, alpha) {
+    if (typeof hex === "string" && /^#[0-9a-fA-F]{6}$/.test(hex)) {
+        return hex + alpha;
+    }
+    return hex;
+}
+
 export default class TurnSubscriber {
-    // Static properties of the TurnSubscriber class
-    static gmColor;
+    // On-screen elements
     static container = null;
     static currentImg = null;
     static banner = null;
     static myTimer = null;
 
-    // State tracking
+    // Turn-tracking info
     static lastProcessedTurn = null;
     static lastHiddenRound = null;
     static lastCombatId = null;
 
-    // Static method that starts the turn tracking
+    // Loads settings, then sets up the banner and watches for combat changes.
     static begin() {
-        // Register module settings
-        Hooks.once('init', () => {
+        if (game.settings) {
             Settings.registerSettings();
-        });
+        } else {
+            Hooks.once("init", () => Settings.registerSettings());
+        }
 
-        Hooks.on("ready", () => {
-            const size = Settings.getImgSize() + "px";
+        whenReady(() => {
+            applySystemOverrides(this);
+
+            const size = `${Settings.getImgSize()}px`;
             document.documentElement.style.setProperty("--yourTurnImgWidth", size);
             document.documentElement.style.setProperty("--yourTurnImgHeight", size);
-            // Wait for the GM to be available
-            this.waitForGM().then((gm) => {
-                this.gmColor = gm.color;
 
-                // Create UI elements once (avoids duplication)
-                this.initializeUI();
+            this.initializeUI();
 
-                // Hook that triggers when the combat is updated
-                Hooks.on("updateCombat", (combat, update, options, userId) => {
-                    if (!combat.started || !combat.active) {
-                        this.cleanup();
-                        return;
-                    }
-                    this._onUpdateCombat(combat, update, options, userId);
-                });
-
-                // Cleanup when combat is deleted
-                Hooks.on("deleteCombat", () => this.cleanup());
+            Hooks.on("updateCombat", (combat, update, options, userId) => {
+                if (!combat.started || !combat.active) {
+                    this.cleanup();
+                    return;
+                }
+                this._onUpdateCombat(combat, update, options, userId);
             });
+
+            Hooks.on("deleteCombat", () => this.cleanup());
         });
     }
 
-    // Static method that creates the static container and reusable image element
+    // Builds the banner box and image once. Calling it again does nothing.
     static initializeUI() {
         if (this.container) return;
 
         this.container = document.createElement("div");
         this.container.id = "yourTurnContainer";
-        const uiTOP = document.getElementById("ui-top");
-        if (uiTOP) uiTOP.appendChild(this.container);
 
-        // Compatibility override for Carousel Combat Tracker module (only if active)
-        const combatTrackerDock = game.modules.get("combat-tracker-dock");
-        if (combatTrackerDock?.active) {
+        const uiTOP = document.getElementById("ui-top");
+        if (uiTOP) {
+            uiTOP.appendChild(this.container);
+        } else {
+            // Fallback for UI modules that replace #ui-top.
+            console.warn("your-turn | #ui-top not found; appending banner container to <body>.");
+            document.body.appendChild(this.container);
+        }
+
+        // Adjusts placement for add-on modules that move the combat tracker.
+        const compatModules = ["combat-carousel", "combat-tracker-dock"];
+        if (compatModules.some((id) => game.modules.get(id)?.active)) {
             const styleId = "yourTurn-compat-override";
             if (!document.getElementById(styleId)) {
                 const style = document.createElement("style");
@@ -83,35 +105,19 @@ export default class TurnSubscriber {
         this.container.appendChild(this.currentImg);
     }
 
-    // Static method that waits for the GM to be available
-    static async waitForGM() {
-        let gm = game.users.find((u) => u.isGM && u.active);
-        if (gm) return gm;
-
-        return new Promise((resolve) => {
-            const interval = setInterval(() => {
-                gm = game.users.find((u) => u.isGM && u.active);
-                if (gm) {
-                    clearInterval(interval);
-                    resolve(gm);
-                }
-            }, 1000);
-        });
-    }
-
-    // Static method that initializes configuration
+    // Default display options. Other game systems can replace these.
     static config() {
         return {
             showNextUp: true,
             showTurnNumber: true,
-            imageMarginTop: '',
-            bannerMarginTop: '',
+            imageMarginTop: "",
+            bannerMarginTop: "",
             skipNextCombatant: false,
-            getCombatantDisplayNameFn: null
+            getCombatantDisplayNameFn: null,
         };
     }
 
-    // Static method that resets all state and clears timers
+    // Stops timers, removes the banner, and forgets the current turn.
     static cleanup() {
         if (this.myTimer) {
             clearTimeout(this.myTimer);
@@ -121,63 +127,71 @@ export default class TurnSubscriber {
             this.banner.remove();
             this.banner = null;
         }
+        if (this.currentImg) {
+            this.currentImg.classList.remove("adding", "removing");
+            this.currentImg.removeAttribute("src");
+            this.currentImg.style.marginTop = "";
+        }
         this.lastProcessedTurn = null;
         this.lastHiddenRound = null;
         this.lastCombatId = null;
     }
 
-    // Static method that handles the updateCombat hook
+    // Called when combat changes. Starts fresh for a new combat, then updates.
     static _onUpdateCombat(combat, update, options, userId) {
-        // Reset hidden tracking if a new combat has started
         if (this.lastCombatId !== combat.id) {
             this.lastCombatId = combat.id;
             this.lastHiddenRound = null;
+            this.lastProcessedTurn = null;
         }
 
-        // Only proceed if the turn or round has changed
-        if (!update || (!('turn' in update) && !('round' in update))) return;
-
-        // Avoid processing the same turn twice
-        const currentTurnId = `${combat.round}-${combat.turn}`;
-        if (currentTurnId === this.lastProcessedTurn) return;
-        this.lastProcessedTurn = currentTurnId;
+        if (!update || (!("turn" in update) && !("round" in update))) return;
 
         this.updateForNewTurn(combat);
     }
 
-    // Core logic: show or hide banner based on combatant state
+    // Shows the banner/image for the current turn. Skips if the turn hasn't
+    // really changed, so the banner stays hidden after fading.
     static updateForNewTurn(combat) {
-        // Always record dedup key so direct calls (e.g. Exalted toggleTurnOver) won't cause double-processing when the normal hook fires later.
-        this.lastProcessedTurn = `${combat.round}-${combat.turn}`;
+        if (!combat?.turns || combat.turn == null) return;
 
         const combatant = combat.combatant;
-        if (!combatant) return;
+        // Tracks turn by round and combatant, so reordering the list
+        // doesn't count as a brand-new turn.
+        const key = combatant
+            ? `${combat.round}:${combatant.id}`
+            : `${combat.round}:${combat.turn}`;
 
-        // If the combatant is defeated, simply hide any existing banner
+        if (key === this.lastProcessedTurn) return;
+        this.lastProcessedTurn = key;
+
+        if (!combatant) {
+            this.hideBanner();
+            return;
+        }
+
+        const config = this.config();
+
         if (combatant.defeated) {
             this.hideBanner();
             return;
         }
 
-        // Determine which image to show for the "current" combatant
         const useTokens = Settings.getUseTokens();
-        let currentSrc = useTokens && combatant.token?.texture?.src
-            ? combatant.token.texture.src
-            : combatant.actor?.img;
+        let currentSrc =
+            useTokens && combatant.token?.texture?.src
+                ? combatant.token.texture.src
+                : combatant.actor?.img;
+        currentSrc = currentSrc || "modules/your-turn/img/hidden.svg";
 
-        // Build the display name
-        let ytName = this.getCombatantDisplayName(combatant);
-
+        const ytName = esc(this.getCombatantDisplayName(combatant, config));
         let ytText = "";
 
-        // Determine the banner text based on ownership, hidden status, etc.
-        if (combatant.isOwner && !game.user.isGM &&
-            combatant.players?.some(p => p.id === game.user.id && p.active)) {
+        if (combatant.isOwner && !game.user.isGM && combatant.hasPlayerOwner) {
             ytText = `${game.i18n.localize("YOUR-TURN.YourTurn")}, ${ytName}!`;
         } else if (combatant.hidden) {
-            // Hidden combatant handling
             if (!game.user.isGM && !Settings.getHideNextUpHidden()) {
-                // Only show "Something Happens" once per round
+                // Shows a hidden character's turn at most once per round.
                 if (this.lastHiddenRound !== combat.round) {
                     ytText = game.i18n.localize("YOUR-TURN.SomethingHappens");
                     this.lastHiddenRound = combat.round;
@@ -192,49 +206,35 @@ export default class TurnSubscriber {
             }
         } else {
             const localizedTurn = game.i18n.localize("YOUR-TURN.Turn");
-            if (Settings.getUsePossessive()) {
-                ytText = `${ytName}'s ${localizedTurn}!`;
-            } else {
-                ytText = `${ytName} ${localizedTurn}!`;
-            }
+            ytText = Settings.getUsePossessive()
+                ? `${ytName}'s ${localizedTurn}!`
+                : `${ytName} ${localizedTurn}!`;
         }
 
-        // Compute config once and reuse it, rather than re-invoking (and re-allocating) it separately in each helper below.
-        const config = this.config();
-
-        // Find the "next" combatant, but only if it will be displayed (skipping hidden/defeated entries as needed).
-        const nextCombatant = (config.showNextUp && !Settings.getHideNextUp())
+        const nextCombatant = config.showNextUp
             ? this.getNextCombatant(combat, config)
             : null;
 
-        // Ensure UI exists
         if (!this.container || !this.currentImg) this.initializeUI();
 
-        // Apply CSS animation when changing the main image
         this.updateCurrentImage(currentSrc, config);
-
-        // Create or refresh the banner DOM element
         this.updateBanner(combat, ytText, nextCombatant, config);
-
-        // Restart the unload timer so the image/banner will fade out after 4 seconds
         this.startUnloadTimer();
     }
 
-    // Apply CSS animation when changing the main image
+    // Swaps the image and restarts its entrance animation.
     static updateCurrentImage(src, config = this.config()) {
         if (!this.currentImg) return;
-
         this.currentImg.classList.remove("adding", "removing");
-        this.currentImg.src = src || "modules/your-turn/img/hidden.svg";
-
-        // Force reflow to restart animation
-        void this.currentImg.offsetWidth;
+        this.currentImg.src = src;
+        void this.currentImg.offsetWidth; // Forces the browser to redraw so the animation plays again.
         this.currentImg.classList.add("adding");
-        const margin = config.imageMarginTop;
-        if (margin) this.currentImg.style.marginTop = margin;
+        if (config.imageMarginTop) {
+            this.currentImg.style.marginTop = config.imageMarginTop;
+        }
     }
 
-    // Create or refresh the banner DOM element
+    // Creates the banner and adds it to the page.
     static updateBanner(combat, ytText, nextCombatant, config = this.config()) {
         if (this.banner) {
             this.banner.remove();
@@ -244,25 +244,22 @@ export default class TurnSubscriber {
         const bannerDiv = document.createElement("div");
         bannerDiv.id = "yourTurnBanner";
         bannerDiv.className = "yourTurnBanner";
+        bannerDiv.style.height = `${Settings.getImgSize() + BANNER_PADDING_PX}px`;
 
-        // Adjust banner height based on image size setting
-        const imgSize = Settings.getImgSize();
-        bannerDiv.style.height = `${imgSize + 30}px`;
-
-        // Build subheading: always show round, optionally the turn number
         const baseTurn = this.computeCustomTurnNumber(combat);
-        const turnNumber = Settings.getStartCounterAtOne() ? baseTurn : Math.max(0, baseTurn - 1);
+        const turnNumber = Settings.getStartCounterAtOne()
+            ? baseTurn
+            : Math.max(0, baseTurn - 1);
         let subheadingHTML = `${game.i18n.localize("YOUR-TURN.Round")} #${combat.round}`;
         if (config.showTurnNumber) {
             subheadingHTML += ` ${game.i18n.localize("YOUR-TURN.Turn")} #${turnNumber}`;
         }
 
-        // Next‑up line (only if enabled and a valid next combatant exists)
-        let nextUpHTML = "";
-        if (config.showNextUp && nextCombatant) {
-            nextUpHTML = this.getNextTurnHtml(nextCombatant);
-        }
+        const nextUpHTML = nextCombatant
+            ? this.getNextTurnHtml(nextCombatant, config)
+            : "";
 
+        // The turn text is already safe; the rest comes from translation files.
         bannerDiv.innerHTML = `
             <p id="yourTurnText" class="yourTurnText">${ytText}</p>
             <div class="yourTurnSubheading">${subheadingHTML}</div>
@@ -270,16 +267,16 @@ export default class TurnSubscriber {
             <div id="yourTurnBannerBackground" class="yourTurnBannerBackground"></div>
         `;
 
-        // Set the CSS variables for player and GM colors
+        // Uses the player's color when a player owns the turn; otherwise the GM's color.
         const root = document.documentElement;
         const player = combat.combatant?.players?.[0];
-        if (combat.combatant?.hasPlayerOwner && player?.active) {
-            root.style.setProperty("--yourTurnPlayerColor", player.color);
-            root.style.setProperty("--yourTurnPlayerColorTransparent", player.color + "80");
-        } else {
-            root.style.setProperty("--yourTurnPlayerColor", this.gmColor);
-            root.style.setProperty("--yourTurnPlayerColorTransparent", this.gmColor + "80");
-        }
+        const color =
+            combat.combatant?.hasPlayerOwner && player?.active
+                ? player.color
+                : this._getActiveGMColor();
+        root.style.setProperty("--yourTurnPlayerColor", color);
+        root.style.setProperty("--yourTurnPlayerColorTransparent", withAlpha(color, "80"));
+
         if (config.bannerMarginTop) {
             bannerDiv.style.marginTop = config.bannerMarginTop;
         }
@@ -288,16 +285,15 @@ export default class TurnSubscriber {
         this.banner = bannerDiv;
     }
 
-    // Static method that generates the HTML for the next turn
-    static getNextTurnHtml(nextCombatant) {
-        if (Settings.getHideNextUp() || !nextCombatant) return "";
-
-        let name = TurnSubscriber.getCombatantDisplayName(nextCombatant);
-
+    // Builds the "Next Up" line with a safely escaped name and image link.
+    static getNextTurnHtml(nextCombatant, config = this.config()) {
+        const name = esc(this.getCombatantDisplayName(nextCombatant, config));
         const useTokens = Settings.getUseTokens();
-        let nextSrc = useTokens && nextCombatant.token?.texture?.src
-            ? nextCombatant.token.texture.src
-            : nextCombatant.actor?.img || "modules/your-turn/img/hidden.svg";
+        const rawSrc =
+            useTokens && nextCombatant.token?.texture?.src
+                ? nextCombatant.token.texture.src
+                : nextCombatant.actor?.img || "modules/your-turn/img/hidden.svg";
+        const nextSrc = esc(rawSrc);
 
         return `
             <div class="yourTurnSubheading last">
@@ -307,45 +303,42 @@ export default class TurnSubscriber {
             </div>`;
     }
 
-    // Static method that retrieves the next combatant
+    // Finds the next visible, undefeated combatant. Returns nothing if there isn't one.
     static getNextCombatant(combat, config = this.config()) {
         if (config.skipNextCombatant) return null;
+        if (Settings.getHideNextUp()) return null;
         if (!combat?.turns?.length) return null;
+        if (combat.turns.length <= 1) return null; // Don't show the current combatant as "next."
+        if (combat.turn == null) return null;
 
         let j = 1;
         while (j < combat.turns.length) {
             const idx = (combat.turn + j) % combat.turns.length;
             const combatant = combat.turns[idx];
-
-            // Return immediately if we find a valid combatant
-            if (!combatant.hidden && !combatant.defeated) {
-                return combatant;
-            }
+            if (!combatant.hidden && !combatant.defeated) return combatant;
             j++;
         }
-
-        // No valid next combatant found
         return null;
     }
 
-    // For auxiliary.js usage
-    static getCombatantDisplayName(combatant) {
-        const fn = this.config().getCombatantDisplayNameFn;
+    // Gets the name to display, using a system-specific name if one is set.
+    static getCombatantDisplayName(combatant, config = this.config()) {
+        const fn = config.getCombatantDisplayNameFn;
         return fn ? fn(combatant) : combatant.name;
     }
 
-    // Calculate custom turn number (counts only non‑defeated combatants)
+    // Counts how many turns have passed, ignoring defeated combatants.
     static computeCustomTurnNumber(combat) {
-        if (!combat?.turns || combat.turn === null) return 0;
-
+        if (!combat?.turns || combat.turn == null) return 0;
         let count = 0;
         for (let i = 0; i <= combat.turn; i++) {
-            if (!combat.turns[i].defeated) count++;
+            const c = combat.turns[i];
+            if (c && !c.defeated) count++;
         }
         return count;
     }
 
-    // Static method that hides the banner with a fade-out animation
+    // Fades out and removes the banner, making sure not to remove a newer one.
     static hideBanner() {
         clearTimeout(this.myTimer);
         this.myTimer = null;
@@ -359,16 +352,16 @@ export default class TurnSubscriber {
                 target.remove();
                 this.banner = null;
             }
-        }, 800);
+        }, HIDE_ANIMATION_MS);
     }
 
-    // Static method that starts the auto‑hide timer
+    // Sets a timer to automatically hide the image and banner.
     static startUnloadTimer() {
         clearTimeout(this.myTimer);
-        this.myTimer = setTimeout(() => this.unloadImage(), 4000);
+        this.myTimer = setTimeout(() => this.unloadImage(), UNLOAD_TIMEOUT_MS);
     }
 
-    // Static method that triggers fade‑out on image and banner background
+    // Fades out the image and banner.
     static unloadImage() {
         if (this.currentImg) this.currentImg.classList.add("removing");
         if (this.banner) {
@@ -377,7 +370,12 @@ export default class TurnSubscriber {
             this.banner.classList.add("removing");
         }
     }
+
+    // Gets the active GM's color, or black if no GM is online.
+    static _getActiveGMColor() {
+        const gm = game.users.find((u) => u.isGM && u.active);
+        return gm?.color ?? "#000000";
+    }
 }
 
-// Call the begin() method of TurnSubscriber to start the turn tracking
 TurnSubscriber.begin();
